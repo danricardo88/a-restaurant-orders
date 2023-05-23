@@ -1,7 +1,10 @@
 import pandas as pd
+from typing import Optional
 
-from services.inventory_control import InventoryMapping
-from services.menu_data import MenuData
+from src.services.inventory_control import InventoryMapping
+from src.services.menu_data import MenuData
+from src.models.ingredient import Restriction
+
 
 DATA_PATH = "data/menu_base_data.csv"
 INVENTORY_PATH = "data/inventory_base_data.csv"
@@ -24,36 +27,30 @@ class MenuBuilder:
 
         self.inventory.consume_recipe(curr_dish.recipe)
 
-    # Req 4
-    def get_main_menu(self, restriction=None) -> pd.DataFrame:
-        menu = []
+    def get_main_menu(
+        self, restriction: Optional[Restriction] = None
+    ) -> pd.DataFrame:
+        # Lista para armazenar os pratos do menu
+        items = []
 
-        for dish in self.menu_data.dishes:
-            if restriction is None or restriction not in dish.get_restrictions(
+        # Itera sobre os pratos do menu
+        for menu in self.menu_data.dishes:
+            # Verifica se a restrição é None ou não
+            # está presente nas restrições do prato
+            if restriction is None or restriction not in menu.get_restrictions(
 
             ):
-                if self.inventory.check_recipe_availability(dish.recipe):
-                    dish_dict = {
-                        'dish_name': dish.name,
-                        'ingredients': dish.get_ingredients(),
-                        'price': dish.price,
-                        'restrictions': dish.get_restrictions()
-                    }
-                    menu.append(dish_dict)
+                # Cria um dicionário para armazenar as informações do prato
+                item = {}
+                # Preenche as chaves do dicionário
+                # com os valores correspondentes do prato
+                item['dish_name'] = menu.name
+                item['price'] = menu.price
+                item['ingredients'] = menu.get_ingredients()
+                item['restrictions'] = menu.get_restrictions()
+                # Adiciona o dicionário à lista de pratos
+                items.append(item)
 
-        return pd.DataFrame(
-            menu, columns=['dish_name', 'ingredients', 'price', 'restrictions']
-        )
-
-    def _is_dish_eligible(self, dish, restriction):
-        return (
-            restriction not in dish.get_restrictions() if restriction else True
-        ) and self.inventory.check_recipe_availability(dish.recipe)
-
-    def _create_dish_dict(self, dish):
-        return {
-            'dish_name': dish.name,
-            'ingredients': dish.get_ingredients(),
-            'price': dish.price,
-            'restrictions': dish.get_restrictions()
-        }
+        # Cria um DataFrame a partir da lista de pratos
+        # ta complicado... requi ruim da gota
+        return pd.DataFrame(items)
