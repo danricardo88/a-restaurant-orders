@@ -1,6 +1,7 @@
 import pandas as pd
-from src.services.inventory_control import InventoryMapping
-from src.services.menu_data import MenuData
+
+from services.inventory_control import InventoryMapping
+from services.menu_data import MenuData
 
 DATA_PATH = "data/menu_base_data.csv"
 INVENTORY_PATH = "data/inventory_base_data.csv"
@@ -25,48 +26,34 @@ class MenuBuilder:
 
     # Req 4
     def get_main_menu(self, restriction=None) -> pd.DataFrame:
-        dishes = self.menu_data.dishes
-        if restriction is None:
-            filtered_dishes = dishes
-        else:
-            filtered_dishes = [
-                dish
-                for dish in dishes
-                if restriction not in dish.get_restrictions()
-            ]
+        menu = []
 
-        menu = pd.DataFrame(
-            columns=['dish_name', 'ingredients', 'price', 'restrictions'])
-        for dish in filtered_dishes:
-            ingredients = ", ".join([str(ingredient)
-                                    for ingredient
-                                    in dish.get_ingredients()])
-            restrictions = ", ".join([str(restriction)
-                                     for restriction
-                                     in dish.get_restrictions()])
-            menu = menu.append({
-                'dish_name': dish.name,
-                'ingredients': ingredients,
-                'price': dish.price,
-                'restrictions': restrictions
-            }, ignore_index=True)
+        for dish in self.menu_data.dishes:
+            if restriction is None or restriction not in dish.get_restrictions(
 
-        return menu
+            ):
+                if self.inventory.check_recipe_availability(dish.recipe):
+                    dish_dict = {
+                        'dish_name': dish.name,
+                        'ingredients': dish.get_ingredients(),
+                        'price': dish.price,
+                        'restrictions': dish.get_restrictions()
+                    }
+                    menu.append(dish_dict)
 
-    def compare_dishes(self, given_dish, expected_dish):
-        return (
-            given_dish['dish_name'] == expected_dish.name
-            and given_dish['ingredients'] == ", ".join(
-                [str(ingredient)
-                 for ingredient
-                 in expected_dish.get_ingredients(
-
-                )])
-            and given_dish['price'] == expected_dish.price
-            and given_dish['restrictions'] == ", ".join(
-                [str(restriction)
-                 for restriction
-                 in expected_dish.get_restrictions(
-
-                )])
+        return pd.DataFrame(
+            menu, columns=['dish_name', 'ingredients', 'price', 'restrictions']
         )
+
+    def _is_dish_eligible(self, dish, restriction):
+        return (
+            restriction not in dish.get_restrictions() if restriction else True
+        ) and self.inventory.check_recipe_availability(dish.recipe)
+
+    def _create_dish_dict(self, dish):
+        return {
+            'dish_name': dish.name,
+            'ingredients': dish.get_ingredients(),
+            'price': dish.price,
+            'restrictions': dish.get_restrictions()
+        }
